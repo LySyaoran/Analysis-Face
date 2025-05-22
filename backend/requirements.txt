@@ -1,0 +1,10 @@
+fastapi               # Web framework
+uvicorn[standard]     # ASGI server
+tensorflow            # Deep Learning
+# keras                 # High-level API
+opencv-python         # Xử lý ảnh
+numpy                 # Tính toán
+# websockets            # WebSocket protocol
+python-multipart      # Xử lý form-data nếu cần
+pillow                # Xử lý ảnh
+ultralytics
