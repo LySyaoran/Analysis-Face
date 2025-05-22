@@ -1,4 +1,6 @@
 import asyncio
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from starlette.concurrency import run_in_threadpool
 import tensorflow as tf
