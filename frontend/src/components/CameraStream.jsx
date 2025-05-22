@@ -12,6 +12,7 @@ export default function CameraStream() {
   const [gender, setGender] = useState("");
   const [emotion, setEmotion] = useState("");
   const [conf, setConf] = useState("");
+  const [emotion_conf, setEmotionconf] = useState("");
   const [faces, setFaces] = useState([]);
   const [camOn, setCamOn] = useState(true);
   const [inputMode, setInputMode] = useState("camera");
@@ -29,10 +30,12 @@ export default function CameraStream() {
         setGender(first.gender || "");
         setEmotion(first.emotion || "");
         setConf(first.conf || "");
+        setEmotionconf(first.emotion_conf || "");
       } else {
         setGender("");
         setEmotion("");
         setConf("");
+        setEmotionconf("");
       }
     });
   }, []);
@@ -41,9 +44,9 @@ export default function CameraStream() {
   useEffect(() => {
     if (!camOn || inputMode !== "camera") return;
     const id = setInterval(() => {
-      const img = webcamRef.current?.getScreenshot();
+      const img = webcamRef.current?.getScreenshot({ quality: 0.6 });
       if (img) sendFrame(img);
-    }, 200);
+    }, 500);
     return () => clearInterval(id);
   }, [camOn, inputMode]);
 
@@ -127,7 +130,12 @@ export default function CameraStream() {
             </button>
             <div className="text-lg font-semibold">Giới tính: {gender}</div>
             <div className="text-lg font-semibold">Cảm xúc: {emotion}</div>
-            <div className="text-lg font-semibold">Confidence: {conf}</div>
+            <div className="text-lg font-semibold">
+              Gender Confidence: {conf}
+            </div>
+            <div className="text-lg font-semibold">
+              Emotion Confidence: {emotion_conf}
+            </div>
           </div>
 
           {/* Video + Canvas */}
@@ -187,7 +195,12 @@ export default function CameraStream() {
               <div className="flex flex-col items-center">
                 <div className="text-lg font-semibold">Giới tính: {gender}</div>
                 <div className="text-lg font-semibold">Cảm xúc: {emotion}</div>
-                <div className="text-lg font-semibold">Confidence: {conf}</div>
+                <div className="text-lg font-semibold">
+                  Gender Confidence: {conf}
+                </div>
+                <div className="text-lg font-semibold">
+                  Emotion Confidence: {emotion_conf}
+                </div>
               </div>
 
               <img
