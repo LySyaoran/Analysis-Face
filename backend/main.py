@@ -1,5 +1,6 @@
 import asyncio
 import os
+import uvicorn
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from starlette.concurrency import run_in_threadpool
@@ -122,3 +123,8 @@ async def websocket_endpoint(ws: WebSocket):
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
