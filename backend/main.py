@@ -5,13 +5,15 @@ import cv2
 import base64
 from io import BytesIO
 from PIL import Image
+from ultralytics import YOLO
 
 app = FastAPI(title="Realtime Face Analysis Backend")
 
 # Load model gender
 gender_model = tf.keras.models.load_model("models/gender_classification_CNN.keras")
 # Load face detector
-face_model = cv2.CascadeClassifier("models/haarcascade_frontalface_default.xml")
+yolo_model = YOLO('models/best.pt')
+# face_model = cv2.CascadeClassifier("models/haarcascade_frontalface_default.xml")
 
 # TODO: load emotion model khi có
 emotion_model = tf.keras.models.load_model("models/detection_emotion.h5")
@@ -37,23 +39,28 @@ async def websocket_endpoint(ws: WebSocket):
             frame = decode_frame(data)
 
             # Detect faces
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_model.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
-
             results = []
-            for (x, y, w, h) in faces:
-                face_img = frame[y:y+h, x:x+w]
+            detections = yolo_model.predict(frame, conf=0.5, verbose=False)[0]
+
+            for box in detections.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                w, h = x2 - x1, y2 - y1
+
+                # Bảo vệ: nếu toạ độ ra ngoài ảnh thì bỏ qua
+                if x1 < 0 or y1 < 0 or x2 > frame.shape[1] or y2 > frame.shape[0]:
+                    continue
+
+                face_img = frame[y1:y2, x1:x2]
                 x_input = preprocess(face_img)
-                pred = gender_model.predict(x_input)
+                pred = gender_model.predict(x_input, verbose=0)
                 print(pred)
                 gender = "male" if pred[0][0] > 0.4 else "female"
 
-                # Append kết quả từng khuôn mặt
                 results.append({
-                    "box": [int(x), int(y), int(w), int(h)],
-                    "conf": float(pred[0][0]), 
+                    "box": [x1, y1, w, h],
+                    "conf": float(pred[0][0]),
                     "gender": gender,
-                    "emotion": None  # TODO: Cảm xúc sau
+                    "emotion": None  # TODO: xử lý cảm xúc sau
                 })
                 print(results)
 
