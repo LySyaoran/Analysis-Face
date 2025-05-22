@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: fastapi-app
-    env: docker
-    plan: free
-    autoDeploy: true
