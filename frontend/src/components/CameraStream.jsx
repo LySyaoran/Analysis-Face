@@ -12,7 +12,7 @@ export default function CameraStream() {
   const [gender, setGender] = useState("");
   const [emotion, setEmotion] = useState("");
   const [conf, setConf] = useState("");
-  const [emotion_conf, setEmotionconf] = useState("");
+  const [emotion_probs, setEmotion_probs] = useState({});
   const [faces, setFaces] = useState([]);
   const [camOn, setCamOn] = useState(true);
   const [inputMode, setInputMode] = useState("camera");
@@ -26,16 +26,16 @@ export default function CameraStream() {
       if (data.faces.length > 0) {
         const first = data.faces[0];
         // gender gửi về là string, emotion có thể null
-        console.log("Gender and Emotion: " + first.gender, first.emotion);
+        console.log(first.gender, first.emotion, first.conf, first.emotion_conf, first.emotion_probs);
         setGender(first.gender || "");
         setEmotion(first.emotion || "");
         setConf(first.conf || "");
-        setEmotionconf(first.emotion_conf || "");
+        setEmotion_probs(first.emotion_probs || "");
       } else {
         setGender("");
         setEmotion("");
         setConf("");
-        setEmotionconf("");
+        setEmotion_probs("");
       }
     });
   }, []);
@@ -62,6 +62,19 @@ export default function CameraStream() {
       ctx.strokeRect(x, y, w, h);
     });
   }, [faces]);
+
+  useEffect(() => {
+    // Reset toàn bộ dữ liệu khi đổi chế độ giữa ảnh web và ảnh local
+    if (inputMode === "upload" || inputMode === "localfile") {
+      setImgSrc(null);
+      setGender("");
+      setEmotion("");
+      setConf("");
+      setEmotion_probs({});
+      setFaces([]);
+    }
+  }, [inputMode]);
+  
 
   const toggleCam = () => setCamOn((on) => !on);
 
@@ -101,7 +114,9 @@ export default function CameraStream() {
       {/* Chọn chế độ */}
       <div className="flex gap-4">
         <button
-          onClick={() => setInputMode("camera")}
+          onClick={() => {
+            setInputMode("camera");
+          }}
           className={`px-3 py-1 rounded ${
             inputMode === "camera" ? "bg-blue-600 text-white" : "bg-gray-300"
           }`}
@@ -109,12 +124,24 @@ export default function CameraStream() {
           Camera
         </button>
         <button
-          onClick={() => setInputMode("upload")}
+          onClick={() => {
+            setInputMode("upload");
+          }}
           className={`px-3 py-1 rounded ${
             inputMode === "upload" ? "bg-blue-600 text-white" : "bg-gray-300"
           }`}
         >
-          Ảnh tĩnh
+          Ảnh tĩnh Web
+        </button>
+        <button
+          onClick={() => {
+            setInputMode("localfile");
+          }}
+          className={`px-3 py-1 rounded ${
+            inputMode === "localfile" ? "bg-blue-600 text-white" : "bg-gray-300"
+          }`}
+        >
+          Lấy Ảnh Local
         </button>
       </div>
 
@@ -131,11 +158,21 @@ export default function CameraStream() {
             <div className="text-lg font-semibold">Giới tính: {gender}</div>
             <div className="text-lg font-semibold">Cảm xúc: {emotion}</div>
             <div className="text-lg font-semibold">
-              Gender Confidence: {conf}
+              Gender Confidence: {typeof conf === "number" ? conf.toFixed(3) : ""}
             </div>
-            <div className="text-lg font-semibold">
-              Emotion Confidence: {emotion_conf}
-            </div>
+            <div className="text-lg font-semibold">Emotion Confidences:</div>
+            <table className="w-full border-collapse">
+              <tbody>
+                {Object.entries(emotion_probs).map(([label, p]) => (
+                  <tr key={label}>
+                    <td className="py-1 pr-4 font-medium">{label}</td>
+                    <td className="py-1">
+                      {typeof p === "number" ? p.toFixed(3) : "N/A"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Video + Canvas */}
@@ -196,11 +233,77 @@ export default function CameraStream() {
                 <div className="text-lg font-semibold">Giới tính: {gender}</div>
                 <div className="text-lg font-semibold">Cảm xúc: {emotion}</div>
                 <div className="text-lg font-semibold">
-                  Gender Confidence: {conf}
+                  Gender Confidence:{" "}
+                  {typeof conf === "number" ? conf.toFixed(3) : "N/A"}
                 </div>
                 <div className="text-lg font-semibold">
-                  Emotion Confidence: {emotion_conf}
+                  Emotion Confidences:
                 </div>
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {Object.entries(emotion_probs).map(([label, p]) => (
+                      <tr key={label}>
+                        <td className="py-1 pr-4 font-medium">{label}</td>
+                        <td className="py-1">
+                          {typeof p === "number" ? p.toFixed(3) : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <img
+                src={imgSrc}
+                alt="Uploaded"
+                className="relative border-2 overflow-hidden w-[320px] rounded-lg shadow-lg"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {inputMode === "localfile" && (
+        <div className="flex flex-col items-center gap-4">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-purple-500 text-white px-4 py-2 rounded"
+          >
+            Chọn ảnh từ máy
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+
+          {imgSrc && (
+            <div className="grid grid-cols-2 gap-4 w-full items-center m-4">
+              {/* Thông tin */}
+              <div className="flex flex-col items-center">
+                <div className="text-lg font-semibold">Giới tính: {gender}</div>
+                <div className="text-lg font-semibold">Cảm xúc: {emotion}</div>
+                <div className="text-lg font-semibold">
+                  Gender Confidence:{" "}
+                  {typeof conf === "number" ? conf.toFixed(3) : ""}
+                </div>
+                <div className="text-lg font-semibold">
+                  Emotion Confidences:
+                </div>
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {Object.entries(emotion_probs).map(([label, p]) => (
+                      <tr key={label}>
+                        <td className="py-1 pr-4 font-medium">{label}</td>
+                        <td className="py-1">
+                          {typeof p === "number" ? p.toFixed(3) : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               <img

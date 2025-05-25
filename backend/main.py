@@ -41,40 +41,48 @@ def preprocess_cnn(img: np.ndarray, size=(32,32)):
 
 def run_models(frame: np.ndarray):
     """
-    Chạy face detection + gender + emotion trên 1 frame.
-    Trả về list kết quả.
+    Chạy face detection + gender + emotion trên 1 frame,
+    trả về list kết quả với confidence cho tất cả các nhãn.
     """
     results = []
     detections = yolo_model.predict(frame, conf=0.5, verbose=False)[0]
 
+    labels = ['Angry','Disgust','Fear','Happy','Neutral','Sad','Surprise']
+
     for box in detections.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
-        # kiểm tra trong khung hình
-        if x1 < 0 or y1 < 0 or x2 > frame.shape[1] or y2 > frame.shape[0]:
+        if x1<0 or y1<0 or x2>frame.shape[1] or y2>frame.shape[0]:
             continue
         face = frame[y1:y2, x1:x2]
 
         # ==== Gender ====
         gm = gender_model.predict(preprocess_cnn(face), verbose=0)[0][0]
-        gender = "male" if gm > 0.4 else "female"
+        gender_label = "male" if gm > 0.4 else "female"
 
         # ==== Emotion ====
         gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
         em_in = np.expand_dims(cv2.resize(gray, (48,48)) / 255.0, axis=(0,3))
         emo_pred = emotion_model.predict(em_in, verbose=0)[0]
+        # chuyển thành dict nhãn: confidence
+        emotion_probs = { labels[i]: float(emo_pred[i]) for i in range(len(labels)) }
+        print(emotion_probs)
+        # nhãn và confidence cao nhất
         idx = int(np.argmax(emo_pred))
-        labels = ['Angry','Disgust','Fear','Happy','Neutral','Sad','Surprise']
-        emotion = labels[idx] if idx < len(labels) else "Unknown"
-        emo_conf = float(emo_pred[idx]) if idx < len(emo_pred) else 0.0
+        emotion_label = labels[idx]
+        emotion_conf = float(emo_pred[idx])
 
         results.append({
             "box": [x1, y1, x2-x1, y2-y1],
-            "gender": gender,
+            # gender
+            "gender": gender_label,
             "conf": float(gm),
-            "emotion": emotion,
-            "emotion_conf": emo_conf
+            # emotion
+            "emotion": emotion_label,
+            "emotion_conf": emotion_conf,
+            "emotion_probs": emotion_probs
         })
     return results
+
 
 # queue và map ws->latest_result
 frame_queue    = asyncio.Queue()
